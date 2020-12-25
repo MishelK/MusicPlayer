@@ -15,14 +15,18 @@ import com.bumptech.glide.Glide;
 import java.io.File;
 import java.util.List;
 
+import javax.security.auth.callback.Callback;
+
 public class SongAdapter extends BaseAdapter implements View.OnClickListener {
 
     private List<Song> songs;
     private Context context;
+    private MainActivity callback;
 
     public SongAdapter(List<Song> songs, Context context) {
         this.songs = songs;
         this.context = context;
+        this.callback = (MainActivity) context;
     }
 
     @Override
@@ -53,7 +57,7 @@ public class SongAdapter extends BaseAdapter implements View.OnClickListener {
         TextView songNameTv = convertView.findViewById(R.id.song_name);
         ImageView imageView = convertView.findViewById(R.id.song_image);
 
-        convertView.setTag(song.getId());
+        convertView.setTag(position);
         convertView.setOnClickListener(this);
 
         songNameTv.setText(song.getName());
@@ -66,7 +70,8 @@ public class SongAdapter extends BaseAdapter implements View.OnClickListener {
 
     @Override
     public void onClick(View v) {
-        
+
+        callback.setSelectedSong(Integer.parseInt(v.getTag().toString()));
     }
 
 }
