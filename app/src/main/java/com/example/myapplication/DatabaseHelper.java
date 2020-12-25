@@ -103,9 +103,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         Uri uri = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.drawable.default_image);
         String defaultImageUri = uri.toString();
 
-        addSongForSeed("bob", "http://www.syntax.org.il/xtra/bob.m4a", defaultImageUri, db);
-        addSongForSeed("bob1", "http://www.syntax.org.il/xtra/bob1.m4a", defaultImageUri, db);
-        addSongForSeed("bob2", "http://www.syntax.org.il/xtra/bob2.mp3", defaultImageUri, db);
+        addSongForSeed("bob", "https://www.syntax.org.il/xtra/bob.m4a", defaultImageUri, db);
+        addSongForSeed("bob1", "https://www.syntax.org.il/xtra/bob1.m4a", defaultImageUri, db);
+        addSongForSeed("bob2", "https://www.syntax.org.il/xtra/bob2.mp3", defaultImageUri, db);
         Toast.makeText(context, "seedDatabase", Toast.LENGTH_SHORT).show();
     }
 
