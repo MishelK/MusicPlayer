@@ -5,8 +5,12 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.net.Uri;
+import android.widget.Toast;
 
 import androidx.annotation.Nullable;
+
+import java.util.ArrayList;
 
 public class DatabaseHelper extends SQLiteOpenHelper {
 
@@ -18,7 +22,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public static final String COL_0_SONGS_ID = "Song_Id";
     public static final String COL_1_SONGS_NAME = "Song_Name";
     public static final String COL_2_SONGS_LINK = "Song_Link";
-    public static final String COL_3_SONGS_IMAGE = "Song_Img_Path";
+    public static final String COL_3_SONGS_IMAGE = "Song_Img_Path"; //will hold the image's URI
+
+    private Context context;
 
     public static DatabaseHelper getInstance(Context context){
 
@@ -29,6 +35,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     private DatabaseHelper(@Nullable Context context) {
         super(context, DATABASE_NAME, null, 1);
+        this.context = context;
     }
 
     @Override
@@ -37,9 +44,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         db.execSQL("CREATE TABLE " + TABLE_NAME_SONGS + "(" + COL_0_SONGS_ID + " INTEGER PRIMARY KEY AUTOINCREMENT,"
                 + COL_1_SONGS_NAME + " TEXT," + COL_2_SONGS_LINK + " TEXT," + COL_3_SONGS_IMAGE + " TEXT)"); // Creating the table
 
-        addSong("bob", "http://www.syntax.org.il/xtra/bob.m4a", "");
-        addSong("bob1", "http://www.syntax.org.il/xtra/bob1.m4a", "");
-        addSong("bob2", "http://www.syntax.org.il/xtra/bob2.mp3", "");
+        seedDatabase(db);
     }
 
     @Override
@@ -68,27 +73,41 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return result != 0;
     }
 
-    public Song[] getAllSongs() {
+    public ArrayList<Song> getSongsArrayList() {
 
         SQLiteDatabase db = this.getWritableDatabase();
         Cursor result = db.rawQuery("SELECT * FROM " + TABLE_NAME_SONGS, null); // Returns all songs in table
-        Song[] songs = null;
+        ArrayList<Song> songs = new ArrayList<>();
 
         if(result.getCount() > 0) {
-            songs = new Song[result.getCount()];
-            int i = 0;
-
             while(result.moveToNext()) {
-                songs[i].song_id = result.getString(0);
-                songs[i].song_name = result.getString(1);
-                songs[i].song_link = result.getString(2);
-                songs[i].song_image_path = result.getString(3);
-                i++;
+                songs.add(new Song(result.getString(0), result.getString(1), result.getString(2), Uri.parse(result.getString(3))));
             }
         }
         return songs;
     }
 
+    public boolean addSongForSeed(String name, String link, String imagePath, SQLiteDatabase db) {
+
+        ContentValues contentValues = new ContentValues();
+        contentValues.put(COL_1_SONGS_NAME, name);
+        contentValues.put(COL_2_SONGS_LINK, link);
+        contentValues.put(COL_3_SONGS_IMAGE, imagePath);
+
+        long result = db.insert(TABLE_NAME_SONGS, null, contentValues); // Inserting new data into the table
+        return result != -1;
+    }
+
+    public void seedDatabase(SQLiteDatabase db){
+
+        Uri uri = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.drawable.default_image);
+        String defaultImageUri = uri.toString();
+
+        addSongForSeed("bob", "http://www.syntax.org.il/xtra/bob.m4a", defaultImageUri, db);
+        addSongForSeed("bob1", "http://www.syntax.org.il/xtra/bob1.m4a", defaultImageUri, db);
+        addSongForSeed("bob2", "http://www.syntax.org.il/xtra/bob2.mp3", defaultImageUri, db);
+        Toast.makeText(context, "seedDatabase", Toast.LENGTH_SHORT).show();
+    }
 
 
 }
