@@ -3,18 +3,24 @@ package com.example.myapplication;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
 
+import android.app.Dialog;
 import android.content.Intent;
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.widget.VideoView;
 
 import com.bumptech.glide.Glide;
 
 import java.util.ArrayList;
+import java.util.Objects;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -23,7 +29,7 @@ public class MainActivity extends AppCompatActivity {
 
     TextView selectedSongNameTv;
     ImageView selectedSongIv;
-    Button playBtn;
+    Button playBtn, addSongBtn;
 
     ArrayList<Song> songs;
 
@@ -52,11 +58,11 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 if(isPlaying){
-                    playBtn.setText(("Play"));
+                    playBtn.setBackgroundResource(R.drawable.play);
                     stopMusic();
                 }
                 else{
-                    playBtn.setText("Stop");
+                    playBtn.setBackgroundResource(R.drawable.pause);
                     playMusic();
                 }
                 isPlaying = !isPlaying;
@@ -64,10 +70,42 @@ public class MainActivity extends AppCompatActivity {
         });
 
         if(getIntent().hasExtra("playing")){
-            playBtn.setText("Stop");
+            playBtn.setBackgroundResource(R.drawable.pause);
             isPlaying = true; }
 
+        addSongBtn = findViewById(R.id.btn_add_song);
+        addSongBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
 
+                final Dialog dialog = new Dialog(MainActivity.this);
+                dialog.setContentView(R.layout.dialog_addsong);
+                Objects.requireNonNull(dialog.getWindow()).setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+                dialog.setCancelable(true);
+
+                Button cancelDialogBtn = dialog.findViewById(R.id.btn_cancel_song_dialog);
+                Button addDialogBtn = dialog.findViewById(R.id.btn_add_song_dialog);
+                Button selectImageBtn = dialog.findViewById(R.id.btn_select_image);
+
+                cancelDialogBtn.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        dialog.dismiss();
+                    }
+                });
+                addDialogBtn.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        EditText urlEt = dialog.findViewById(R.id.et_song_url);
+                        String Url = urlEt.getText().toString();
+
+                        //need to implement adding song to db and also checking if user selected an image, if not then transfer default image uri
+                    }
+                });
+
+                dialog.show();
+            }
+        });
 
     }
 
