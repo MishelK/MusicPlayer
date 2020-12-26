@@ -15,6 +15,7 @@ import android.widget.Toast;
 import androidx.annotation.Nullable;
 
 import java.io.IOException;
+import java.util.ArrayList;
 
 public class MusicPlayerService extends Service implements MediaPlayer.OnCompletionListener,MediaPlayer.OnPreparedListener{
 
@@ -34,6 +35,7 @@ public class MusicPlayerService extends Service implements MediaPlayer.OnComplet
         player.setOnCompletionListener(this);
         player.setOnPreparedListener(this);
         player.reset();
+
     }
 
     @Override
@@ -63,12 +65,11 @@ public class MusicPlayerService extends Service implements MediaPlayer.OnComplet
                 player.stop();
             player.release();
         }
-
     }
 
     @Override
     public void onCompletion(MediaPlayer mp) {
-
+        sendCompleteBroadcast();
         stopSelf();
     }
 
@@ -78,7 +79,7 @@ public class MusicPlayerService extends Service implements MediaPlayer.OnComplet
         player.start();
 
         if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationChannel notificationChannel = new NotificationChannel("my_music_service","My music service", NotificationManager.IMPORTANCE_DEFAULT);
+            NotificationChannel notificationChannel = new NotificationChannel("my_music_service","My music service", NotificationManager.IMPORTANCE_LOW);
             NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
             manager.createNotificationChannel(notificationChannel);
 
@@ -107,5 +108,10 @@ public class MusicPlayerService extends Service implements MediaPlayer.OnComplet
 
         }
 
+    }
+
+    private void sendCompleteBroadcast(){
+        Intent intent = new Intent("com.musicplayer.COMPLETE_ACTION");
+        sendBroadcast(intent);
     }
 }

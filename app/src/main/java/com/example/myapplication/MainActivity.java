@@ -5,8 +5,10 @@ import androidx.appcompat.app.AppCompatDelegate;
 
 import android.app.Dialog;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
+import android.net.ConnectivityManager;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
@@ -29,15 +31,20 @@ public class MainActivity extends AppCompatActivity {
 
     TextView selectedSongNameTv;
     ImageView selectedSongIv;
-    Button playBtn, addSongBtn;
+    Button playBtn, nextBtn, prevBtn, addSongBtn;
 
     ArrayList<Song> songs;
 
+    MusicServiceBroadcastReceiver musicServiceBroadcastReceiver = new MusicServiceBroadcastReceiver(this);
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        //Registering broadcast receiver
+        IntentFilter filter = new IntentFilter("com.musicplayer.COMPLETE_ACTION");
+        registerReceiver(musicServiceBroadcastReceiver, filter);
 
         //Loading song list from db and filling song list
         ListView listView = findViewById(R.id.song_list);
@@ -46,11 +53,15 @@ public class MainActivity extends AppCompatActivity {
         listView.setAdapter(songAdapter);
 
         //Initializing selected song
-        selectedSongPosition = 0;
-        selectedSongNameTv = findViewById(R.id.selected_song_name);
-        selectedSongIv = findViewById(R.id.selected_song_image);
-        setSelectedSong(0);
-
+        if(songs.size() != 0) {
+            selectedSongPosition = 0;
+            selectedSongNameTv = findViewById(R.id.selected_song_name);
+            selectedSongIv = findViewById(R.id.selected_song_image);
+            setSelectedSong(0);
+        }
+        else{
+            // here we will display no songs in list
+        }
 
         //Initializing pause-play button
         playBtn = findViewById(R.id.btn_play_pause);
@@ -107,14 +118,30 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        nextBtn = findViewById(R.id.btn_next);
+        prevBtn = findViewById(R.id.btn_prev);
+        nextBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                nextSong();
+            }
+        });
+        prevBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                prevSong();
+            }
+        });
     }
 
     private void playMusic() {
+        if(songs.size() != 0) {
+            Intent intent = new Intent(this, MusicPlayerService.class);
+            intent.putExtra("Link", songs.get(selectedSongPosition).getLink());
+            intent.putExtra("Name", songs.get(selectedSongPosition).getName());
 
-        Intent intent = new Intent(this, MusicPlayerService.class);
-        intent.putExtra("Link", songs.get(selectedSongPosition).getLink());
-        intent.putExtra("Name", songs.get(selectedSongPosition).getName());
-        startService(intent);
+            startService(intent);
+        }
     }
 
     private void stopMusic() {
@@ -123,13 +150,48 @@ public class MainActivity extends AppCompatActivity {
         stopService(intent);
     }
 
+    public void nextSong(){
+        if(songs.size() != 0) {
+            selectedSongPosition++;
+            if (selectedSongPosition >= songs.size())
+                selectedSongPosition = 0;
+
+            setSelectedSong(selectedSongPosition);
+            playSelectedSong();
+        }
+    }
+
+    public void prevSong(){
+        if(songs.size() != 0) {
+            selectedSongPosition--;
+            if (selectedSongPosition < 0)
+                selectedSongPosition = songs.size() - 1;
+
+            setSelectedSong(selectedSongPosition);
+        }
+    }
+
     public void setSelectedSong(int position) {
 
         if (songs.size() > position) {
+            selectedSongPosition = position;
             selectedSongNameTv.setText(songs.get(position).getName());
             Glide.with(this)
                     .load(songs.get(position).getImage_URI())
                     .into(selectedSongIv);
         }
+    }
+
+    public void playSelectedSong() {
+
+        stopMusic();
+        playMusic();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        unregisterReceiver(musicServiceBroadcastReceiver);
+        stopMusic();
     }
 }
