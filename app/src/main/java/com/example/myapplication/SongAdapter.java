@@ -19,6 +19,8 @@ import javax.security.auth.callback.Callback;
 
 public class SongAdapter extends BaseAdapter implements View.OnClickListener {
 
+    //Unused, since project moved from listview to recyclerview, SongRecyclerAdapter is now used instead.
+
     private List<Song> songs;
     private Context context;
     private MainActivity callback;
@@ -71,7 +73,13 @@ public class SongAdapter extends BaseAdapter implements View.OnClickListener {
     @Override
     public void onClick(View v) {
 
-        callback.setSelectedSong(Integer.parseInt(v.getTag().toString()));
+        callback.songSelected(Integer.parseInt(v.getTag().toString()));
     }
+
+    //Loading song list from db and filling recyclerview
+        /*ListView listView = findViewById(R.id.song_list);
+        songs = DatabaseHelper.getInstance(this).getSongsArrayList();
+        SongAdapter songAdapter = new SongAdapter(songs, this);
+        listView.setAdapter(songAdapter);*/
 
 }

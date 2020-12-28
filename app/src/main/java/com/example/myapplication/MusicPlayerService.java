@@ -22,6 +22,7 @@ public class MusicPlayerService extends Service implements MediaPlayer.OnComplet
     private MediaPlayer player = new MediaPlayer();
 
     private String songName;
+    private Integer position;
 
     @Nullable
     @Override
@@ -43,6 +44,7 @@ public class MusicPlayerService extends Service implements MediaPlayer.OnComplet
 
         String link = intent.getStringExtra("Link");
         songName = intent.getStringExtra("Name");
+        position = intent.getIntExtra("Position", 0);
 
         if(!player.isPlaying()) {
             try {
@@ -89,6 +91,7 @@ public class MusicPlayerService extends Service implements MediaPlayer.OnComplet
 
             Intent intent = new Intent(this, MainActivity.class);
             intent.putExtra("playing",true);
+            intent.putExtra("Position", position);
             PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
             builder.setContentIntent(pendingIntent);
 
@@ -101,6 +104,7 @@ public class MusicPlayerService extends Service implements MediaPlayer.OnComplet
 
             Intent intent = new Intent(this, MainActivity.class);
             intent.putExtra("playing",true);
+            intent.putExtra("Position", position);
             PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
             builder.setContentIntent(pendingIntent);
 

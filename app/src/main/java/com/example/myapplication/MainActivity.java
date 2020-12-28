@@ -1,7 +1,12 @@
 package com.example.myapplication;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
+import androidx.recyclerview.widget.DividerItemDecoration;
+import androidx.recyclerview.widget.ItemTouchHelper;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import android.app.Dialog;
 import android.content.Intent;
@@ -10,6 +15,7 @@ import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.net.ConnectivityManager;
 import android.os.Bundle;
+import android.provider.ContactsContract;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -22,6 +28,8 @@ import android.widget.VideoView;
 import com.bumptech.glide.Glide;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Objects;
 
 public class MainActivity extends AppCompatActivity {
@@ -34,6 +42,8 @@ public class MainActivity extends AppCompatActivity {
     Button playBtn, nextBtn, prevBtn, addSongBtn;
 
     ArrayList<Song> songs;
+    RecyclerView recyclerView;
+    SongRecyclerAdapter songRecyclerAdapter;
 
     MusicServiceBroadcastReceiver musicServiceBroadcastReceiver = new MusicServiceBroadcastReceiver(this);
     @Override
@@ -46,11 +56,15 @@ public class MainActivity extends AppCompatActivity {
         IntentFilter filter = new IntentFilter("com.musicplayer.COMPLETE_ACTION");
         registerReceiver(musicServiceBroadcastReceiver, filter);
 
-        //Loading song list from db and filling song list
-        ListView listView = findViewById(R.id.song_list);
         songs = DatabaseHelper.getInstance(this).getSongsArrayList();
-        SongAdapter songAdapter = new SongAdapter(songs, this);
-        listView.setAdapter(songAdapter);
+        recyclerView = findViewById(R.id.song_list);
+        songRecyclerAdapter = new SongRecyclerAdapter(songs, this);
+        DividerItemDecoration dividerItemDecoration = new DividerItemDecoration(this, DividerItemDecoration.VERTICAL);
+        ItemTouchHelper itemTouchHelper = new ItemTouchHelper(simpleCallback);
+
+        recyclerView.setAdapter(songRecyclerAdapter);
+        recyclerView.addItemDecoration(dividerItemDecoration);
+        itemTouchHelper.attachToRecyclerView(recyclerView);
 
         //Initializing selected song
         if(songs.size() != 0) {
@@ -80,9 +94,11 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        if(getIntent().hasExtra("playing")){
+        if(getIntent().hasExtra("playing")) {
             playBtn.setBackgroundResource(R.drawable.pause);
-            isPlaying = true; }
+            isPlaying = true;
+            setSelectedSong(getIntent().getIntExtra("Position", 0));
+        }
 
         addSongBtn = findViewById(R.id.btn_add_song);
         addSongBtn.setOnClickListener(new View.OnClickListener() {
@@ -134,11 +150,68 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    Song deletedSong = null;
+
+    ItemTouchHelper.SimpleCallback simpleCallback = new ItemTouchHelper.SimpleCallback(ItemTouchHelper.UP | ItemTouchHelper.DOWN | ItemTouchHelper.START | ItemTouchHelper.END, ItemTouchHelper.LEFT) {
+        @Override
+        public boolean onMove(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder, @NonNull RecyclerView.ViewHolder target) {
+
+            int fromPosition = viewHolder.getAdapterPosition();
+            int toPosition = target.getAdapterPosition();
+
+            Collections.swap(songs, fromPosition, toPosition);
+            recyclerView.getAdapter().notifyItemMoved(fromPosition, toPosition);
+            if(fromPosition == selectedSongPosition)
+                selectedSongPosition = toPosition;
+            return false;
+        }
+
+        @Override
+        public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
+            int position = viewHolder.getAdapterPosition();
+            deletedSong = songs.get(position);
+            switch (direction){
+                case ItemTouchHelper.LEFT:
+                    Dialog dialog = new Dialog(MainActivity.this);
+                    dialog.setContentView(R.layout.dialog_deletesong);
+                    Objects.requireNonNull(dialog.getWindow()).setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+                    dialog.setCancelable(true);
+                    Button cancelBtn = dialog.findViewById(R.id.btn_cancel_delete_song);
+                    Button confirmBtn = dialog.findViewById(R.id.btn_confirm_delete_song);
+                    cancelBtn.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            songs.remove(position);
+                            songRecyclerAdapter.notifyItemRemoved(position);
+                            songs.add(position, deletedSong);
+                            songRecyclerAdapter.notifyItemInserted(position);
+                            dialog.dismiss();
+                        }
+                    });
+                    confirmBtn.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            DatabaseHelper.getInstance(MainActivity.this).deleteSong(songs.get(position).getId());
+                            songs.remove(position);
+                            songRecyclerAdapter.notifyItemRemoved(position);
+                            dialog.dismiss();
+                        }
+                    });
+                    dialog.show();
+                    break;
+
+                case ItemTouchHelper.RIGHT:
+                    break;
+            }
+        }
+    };
+
     private void playMusic() {
         if(songs.size() != 0) {
             Intent intent = new Intent(this, MusicPlayerService.class);
             intent.putExtra("Link", songs.get(selectedSongPosition).getLink());
             intent.putExtra("Name", songs.get(selectedSongPosition).getName());
+            intent.putExtra("Position", selectedSongPosition);
 
             startService(intent);
         }
@@ -168,6 +241,7 @@ public class MainActivity extends AppCompatActivity {
                 selectedSongPosition = songs.size() - 1;
 
             setSelectedSong(selectedSongPosition);
+            playSelectedSong();
         }
     }
 
@@ -186,6 +260,15 @@ public class MainActivity extends AppCompatActivity {
 
         stopMusic();
         playMusic();
+        isPlaying = true;
+        playBtn.setBackgroundResource(R.drawable.pause);
+
+    }
+
+    public void songSelected(int position) {
+
+            setSelectedSong(position);
+            playSelectedSong();
     }
 
     @Override
@@ -194,4 +277,5 @@ public class MainActivity extends AppCompatActivity {
         unregisterReceiver(musicServiceBroadcastReceiver);
         stopMusic();
     }
+
 }

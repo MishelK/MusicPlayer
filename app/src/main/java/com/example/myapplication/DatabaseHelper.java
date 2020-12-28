@@ -6,7 +6,6 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.net.Uri;
-import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 
@@ -23,6 +22,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public static final String COL_1_SONGS_NAME = "Song_Name";
     public static final String COL_2_SONGS_LINK = "Song_Link";
     public static final String COL_3_SONGS_IMAGE = "Song_Img_Path"; //will hold the image's URI
+    public static final String COL_4_SONGS_POSITION = "Song_Position";
 
     private Context context;
 
@@ -42,7 +42,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public void onCreate(SQLiteDatabase db) {
 
         db.execSQL("CREATE TABLE " + TABLE_NAME_SONGS + "(" + COL_0_SONGS_ID + " INTEGER PRIMARY KEY AUTOINCREMENT,"
-                + COL_1_SONGS_NAME + " TEXT," + COL_2_SONGS_LINK + " TEXT," + COL_3_SONGS_IMAGE + " TEXT)"); // Creating the table
+                + COL_1_SONGS_NAME + " TEXT," + COL_2_SONGS_LINK + " TEXT," + COL_3_SONGS_IMAGE + " TEXT," + COL_4_SONGS_POSITION + " TEXT)"); // Creating the table
 
         seedDatabase(db);
     }
@@ -106,7 +106,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         addSongForSeed("bob", "https://www.syntax.org.il/xtra/bob.m4a", defaultImageUri, db);
         addSongForSeed("bob1", "https://www.syntax.org.il/xtra/bob1.m4a", defaultImageUri, db);
         addSongForSeed("bob2", "https://www.syntax.org.il/xtra/bob2.mp3", defaultImageUri, db);
-        Toast.makeText(context, "seedDatabase", Toast.LENGTH_SHORT).show();
     }
 
 
