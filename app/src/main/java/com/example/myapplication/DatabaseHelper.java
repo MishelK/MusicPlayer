@@ -6,10 +6,14 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.net.Uri;
+import android.util.Log;
+import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 
 public class DatabaseHelper extends SQLiteOpenHelper {
 
@@ -42,7 +46,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public void onCreate(SQLiteDatabase db) {
 
         db.execSQL("CREATE TABLE " + TABLE_NAME_SONGS + "(" + COL_0_SONGS_ID + " INTEGER PRIMARY KEY AUTOINCREMENT,"
-                + COL_1_SONGS_NAME + " TEXT," + COL_2_SONGS_LINK + " TEXT," + COL_3_SONGS_IMAGE + " TEXT," + COL_4_SONGS_POSITION + " TEXT)"); // Creating the table
+                + COL_1_SONGS_NAME + " TEXT," + COL_2_SONGS_LINK + " TEXT," + COL_3_SONGS_IMAGE + " TEXT," + COL_4_SONGS_POSITION + " INTEGER)"); // Creating the table
 
         seedDatabase(db);
     }
@@ -54,22 +58,36 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         onCreate(db);
     }
 
-    public boolean addSong(String name, String link, String imagePath) {
+    public String addSong(String name, String link, String imagePath, Integer position) {
 
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues contentValues = new ContentValues();
         contentValues.put(COL_1_SONGS_NAME, name);
         contentValues.put(COL_2_SONGS_LINK, link);
         contentValues.put(COL_3_SONGS_IMAGE, imagePath);
+        contentValues.put(COL_4_SONGS_POSITION, position);
 
-        long result = db.insert(TABLE_NAME_SONGS, null, contentValues); // Inserting new data into the table
-        return result != -1;
+        String result = Long.toString(db.insert(TABLE_NAME_SONGS, null, contentValues)); // Inserting new data into the table
+        return result;
     }
 
     public boolean deleteSong(String id) {
 
         SQLiteDatabase db = this.getWritableDatabase();
         long result = db.delete(TABLE_NAME_SONGS, COL_0_SONGS_ID + " = ?", new String[]{id});
+        return result != 0;
+    }
+
+    public boolean updateSong(String id, String name, String link, String imagePath, Integer position) {
+
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues contentValues = new ContentValues();
+        contentValues.put(COL_0_SONGS_ID, id);
+        contentValues.put(COL_1_SONGS_NAME, name);
+        contentValues.put(COL_2_SONGS_LINK, link);
+        contentValues.put(COL_3_SONGS_IMAGE, imagePath);
+        contentValues.put(COL_4_SONGS_POSITION, position);
+        long result = db.update(TABLE_NAME_SONGS, contentValues, COL_0_SONGS_ID + " = ?", new String[]{id});
         return result != 0;
     }
 
@@ -81,18 +99,29 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
         if(result.getCount() > 0) {
             while(result.moveToNext()) {
-                songs.add(new Song(result.getString(0), result.getString(1), result.getString(2), Uri.parse(result.getString(3))));
+                songs.add(new Song(result.getString(0), result.getString(1), result.getString(2), Uri.parse(result.getString(3)), result.getInt(4)));
             }
         }
+
+        Collections.sort(songs, new Comparator<Song>() {
+            @Override
+            public int compare(Song o1, Song o2) {
+                Integer o1Position = o1.getPosition();
+                Integer o2Position = o2.getPosition();
+                return o1Position - o2Position;
+            }
+        });
+
         return songs;
     }
 
-    public boolean addSongForSeed(String name, String link, String imagePath, SQLiteDatabase db) {
+    public boolean addSongForSeed(String name, String link, String imagePath, Integer position, SQLiteDatabase db) {
 
         ContentValues contentValues = new ContentValues();
         contentValues.put(COL_1_SONGS_NAME, name);
         contentValues.put(COL_2_SONGS_LINK, link);
         contentValues.put(COL_3_SONGS_IMAGE, imagePath);
+        contentValues.put(COL_4_SONGS_POSITION, position);
 
         long result = db.insert(TABLE_NAME_SONGS, null, contentValues); // Inserting new data into the table
         return result != -1;
@@ -103,9 +132,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         Uri uri = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.drawable.default_image);
         String defaultImageUri = uri.toString();
 
-        addSongForSeed("bob", "https://www.syntax.org.il/xtra/bob.m4a", defaultImageUri, db);
-        addSongForSeed("bob1", "https://www.syntax.org.il/xtra/bob1.m4a", defaultImageUri, db);
-        addSongForSeed("bob2", "https://www.syntax.org.il/xtra/bob2.mp3", defaultImageUri, db);
+        addSongForSeed("bob", "https://www.syntax.org.il/xtra/bob.m4a", defaultImageUri,0 , db);
+        addSongForSeed("bob1", "https://www.syntax.org.il/xtra/bob1.m4a", defaultImageUri,1, db);
+        addSongForSeed("bob2", "https://www.syntax.org.il/xtra/bob2.mp3", defaultImageUri,2, db);
     }
 
 
