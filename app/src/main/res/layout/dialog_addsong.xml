@@ -26,7 +26,8 @@
         android:id="@+id/et_song_name"
         android:textColorHint="#000000"
         android:background="@drawable/edit_text_border"
-        android:padding="2dp"/>
+        android:padding="2dp"
+        android:textColor="#000000"/>
 
     <TextView
         android:layout_width="wrap_content"
@@ -48,30 +49,10 @@
         android:id="@+id/et_song_url"
         android:textColorHint="#000000"
         android:background="@drawable/edit_text_border"
-        android:padding="2dp"/>
+        android:padding="2dp"
+        android:textColor="#000000"/>
 
-    <Button
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Select image from storage"
-        android:textSize="14dp"
-        android:layout_marginHorizontal="25dp"
-        android:layout_marginTop="20dp"
-        android:id="@+id/btn_select_image_storage"
-        android:background="#000000"
-        android:textColor="#ffffff" />
 
-    <Button
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Take picture using camera"
-        android:textSize="14dp"
-        android:layout_marginHorizontal="25dp"
-        android:layout_marginTop="10dp"
-        android:id="@+id/btn_take_image"
-        android:background="#000000"
-        android:textColor="#ffffff"
-        android:visibility="invisible"/>
 
     <LinearLayout
         android:layout_width="wrap_content"

@@ -71,6 +71,11 @@ public class MainActivity extends AppCompatActivity {
     boolean camera_access;
     Uri cameraImageUri;
 
+    //new song temp data, used when dismissing dialog and re-creating it after camera request
+    String newSongName, newSongURL;
+    Dialog addSongDialog;
+
+
     MusicServiceBroadcastReceiver musicServiceBroadcastReceiver = new MusicServiceBroadcastReceiver(this);
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -78,9 +83,6 @@ public class MainActivity extends AppCompatActivity {
         AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
-        //StrictMode.VmPolicy.Builder builder = new StrictMode.VmPolicy.Builder();
-        //StrictMode.setVmPolicy(builder.build());
 
         //Registering broadcast receiver
         IntentFilter filter = new IntentFilter("com.musicplayer.COMPLETE_ACTION");
@@ -135,68 +137,45 @@ public class MainActivity extends AppCompatActivity {
             executePlayerAction();
 
         addSongBtn = findViewById(R.id.btn_add_song);
+        addSongDialog = new Dialog(MainActivity.this); // this is outside to prevent window leak
         addSongBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
 
-                final Dialog dialog = new Dialog(MainActivity.this);
-                dialog.setContentView(R.layout.dialog_addsong);
-                Objects.requireNonNull(dialog.getWindow()).setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-                dialog.setCancelable(true);
+                addSongDialog.setContentView(R.layout.dialog_addsong);
+                Objects.requireNonNull(addSongDialog.getWindow()).setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+                addSongDialog.setCancelable(true);
                 Uri imageUri;
 
-                Button cancelDialogBtn = dialog.findViewById(R.id.btn_cancel_song_dialog);
-                Button addDialogBtn = dialog.findViewById(R.id.btn_add_song_dialog);
-                Button selectImageBtn = dialog.findViewById(R.id.btn_select_image_storage);
-                Button takeImageBtn = dialog.findViewById(R.id.btn_take_image);
+                Button cancelDialogBtn = addSongDialog.findViewById(R.id.btn_cancel_song_dialog);
+                Button addDialogBtn = addSongDialog.findViewById(R.id.btn_add_song_dialog);
 
                 cancelDialogBtn.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
-                        dialog.dismiss();
+                        addSongDialog.dismiss();
+                        addedSongImageUri = null;
                     }
                 });
                 addDialogBtn.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
-                        EditText urlEt = dialog.findViewById(R.id.et_song_url);
-                        EditText nameEt = dialog.findViewById(R.id.et_song_name);
+                        EditText urlEt = addSongDialog.findViewById(R.id.et_song_url);
+                        EditText nameEt = addSongDialog.findViewById(R.id.et_song_name);
                         String Url = urlEt.getText().toString();
                         String name = nameEt.getText().toString();
                         Uri imageUri;
-                        if(addedSongImageUri != null)
-                            imageUri = addedSongImageUri;
-                        else {
-                            Uri uri = Uri.parse("android.resource://" + getApplicationContext().getPackageName() + "/" + R.drawable.default_image);
-                            imageUri = uri;
+                        if(!name.isEmpty()) {
+                            addSongDialog.dismiss();
+                            newSongName = name;
+                            newSongURL = Url;
+                            startImageSelectionDialog();
+                        }else{
+                            Toast.makeText(MainActivity.this, "Please enter song name", Toast.LENGTH_SHORT).show();
                         }
-                        //need to make sure edittext's are not empty
-                        String songID = DatabaseHelper.getInstance(MainActivity.this).addSong(name, Url, imageUri.toString(), songs.size()-1);
-                        Song song = new Song(songID, name, Url, imageUri, songs.size());
-                        songs.add(song);
-                        songRecyclerAdapter.notifyItemInserted(songs.size()-1);
-                        addedSongImageUri = null;
-                        dialog.dismiss();
                     }
                 });
-                selectImageBtn.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        Intent selectImage = new Intent(Intent.ACTION_PICK, android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
-                        startActivityForResult(selectImage, GALLERY_REQUEST);
-                    }
-                });
-                takeImageBtn.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-
-                        cameraRequest();
-                    }
-                });
-                if(camera_access)
-                    takeImageBtn.setVisibility(View.VISIBLE);
-
-                dialog.show();
+                addSongDialog.show();
             }
         });
 
@@ -229,9 +208,21 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
+    protected void onResume() {
+        super.onResume();
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+    }
+
+    @Override
     protected void onPause() {
         super.onPause();
         updateSongOrderInDatabase();
+        addSongDialog.dismiss();
+        Log.i("aba", "onpause");
     }
 
     @Override
@@ -286,6 +277,13 @@ public class MainActivity extends AppCompatActivity {
                             DatabaseHelper.getInstance(MainActivity.this).deleteSong(songs.get(position).getId());
                             songs.remove(position);
                             songRecyclerAdapter.notifyItemRemoved(position);
+                            if(position == selectedSongPosition && !songs.isEmpty()) {
+                                setSelectedSong(0);
+                                if(isPlaying) {
+                                    stopMusic();
+                                    playBtn.setBackgroundResource(R.drawable.play);
+                                }
+                            }
                             dialog.dismiss();
                         }
                     });
@@ -382,12 +380,26 @@ public class MainActivity extends AppCompatActivity {
                 if(resultCode == RESULT_OK){
                     Log.i("aba", "camera request , result ok");
                     addedSongImageUri = cameraImageUri;
+                    String songID = DatabaseHelper.getInstance(MainActivity.this).addSong(newSongName, newSongURL, cameraImageUri.toString(), songs.size() - 1);
+                    Song song = new Song(songID, newSongName, newSongURL, addedSongImageUri, songs.size());
+                    songs.add(song);
+                    songRecyclerAdapter.notifyItemInserted(songs.size() - 1);
+                    addedSongImageUri = null;
+                    newSongURL = null;
+                    newSongName = null;
                 }
                 break;
             case GALLERY_REQUEST: // case SelectImage
                 if(resultCode == RESULT_OK) {
                     Log.i("aba", "gallery request");
                     addedSongImageUri = data.getData();
+                    String songID = DatabaseHelper.getInstance(MainActivity.this).addSong(newSongName, newSongURL, addedSongImageUri.toString(), songs.size() - 1);
+                    Song song = new Song(songID, newSongName, newSongURL, addedSongImageUri, songs.size());
+                    songs.add(song);
+                    songRecyclerAdapter.notifyItemInserted(songs.size() - 1);
+                    addedSongImageUri = null;
+                    newSongURL = null;
+                    newSongName = null;
                 }
                 break;
         }
@@ -406,12 +418,16 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void cameraRequest(){
-        newSongFile = new File(Environment.getExternalStorageDirectory(),"piccdwac.jpg");
+        Date c = Calendar.getInstance().getTime();
+        System.out.println("Current time => " + c);
+        SimpleDateFormat df = new SimpleDateFormat("dd-MMM-yyyy", Locale.getDefault());
+        String formattedDate = df.format(c);
+        newSongFile = new File(Environment.getExternalStorageDirectory(),newSongName+formattedDate+"picc.jpg");
         cameraImageUri = FileProvider.getUriForFile(MainActivity.this, "com.example.myapplication.provider", newSongFile);
         Intent takePicture = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
         Log.i("aba", "cameraImageUri "+cameraImageUri.toString());
         Log.i("aba", "file.absolutepath  "+newSongFile.getAbsolutePath().toString());
-        //takePicture.putExtra(MediaStore.EXTRA_OUTPUT, cameraImageUri);
+        takePicture.putExtra(MediaStore.EXTRA_OUTPUT, cameraImageUri);
         startActivityForResult(takePicture, CAMERA_REQUEST);
     }
 
@@ -431,4 +447,61 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    public void startImageSelectionDialog () {
+
+        Dialog dialog = new Dialog(MainActivity.this);
+        dialog.setContentView(R.layout.dialog_chooseimage);
+        Objects.requireNonNull(dialog.getWindow()).setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        dialog.setCancelable(false);
+
+        Button selectImageBtn = dialog.findViewById(R.id.btn_image_storage);
+        Button takeImageBtn = dialog.findViewById(R.id.btn_take_image);
+        Button defaultImageBtn = dialog.findViewById(R.id.btn_image_default);
+
+        selectImageBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (addSongDialog != null && addSongDialog.isShowing()) {
+                    addSongDialog.dismiss();
+                }
+                if (dialog != null && dialog.isShowing()) {
+                    dialog.dismiss();
+                }
+                Intent selectImage = new Intent(Intent.ACTION_PICK, android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+                startActivityForResult(selectImage, GALLERY_REQUEST);
+            }
+        });
+        takeImageBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (addSongDialog != null && addSongDialog.isShowing()) {
+                    addSongDialog.dismiss();
+                }
+                if (dialog != null && dialog.isShowing()) {
+                    dialog.dismiss();
+                }
+                cameraRequest();
+            }
+        });
+        defaultImageBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Uri uri = Uri.parse("android.resource://" + getApplicationContext().getPackageName() + "/" + R.drawable.default_image);
+                String defaultImageUri = uri.toString();
+                String songID = DatabaseHelper.getInstance(MainActivity.this).addSong(newSongName, newSongURL, defaultImageUri, songs.size() - 1);
+                Song song = new Song(songID, newSongName, newSongURL, Uri.parse(defaultImageUri), songs.size());
+                songs.add(song);
+                songRecyclerAdapter.notifyItemInserted(songs.size() - 1);
+                addedSongImageUri = null;
+                newSongURL = null;
+                newSongName = null;
+                dialog.dismiss();
+            }
+        });
+        if(camera_access)
+            takeImageBtn.setVisibility(View.VISIBLE);
+
+        dialog.show();
+    }
 }
+
